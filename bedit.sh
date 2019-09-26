@@ -281,23 +281,23 @@ function besearch()
 	    SEARCHPAT="."
 	fi	
     fi
-    i=$(( $CURLIN + 1 ))
+    i=$(( $CURLIN  ))
     MATCH=0
     while [[ $i -lt ${#BUFF[@]} ]];
     do
 	TESTLN="${BUFF[$i]}"
 	if [[ $TESTLN =~ $SEARCHPAT ]]; then
-	    CURLIN=$i
-	    MATCH=1
+#	    CURLIN=$(( $i + 1 ))
+	    MATCH=$(( $i + 1 ))
 	    break
 	fi
 	i=$(( $i + 1 ))
     done
     if [ "$MATCH" == "0" ]; then
-	errormsg "No Match for $SEARCHPAT. Restart at top of file, $MATCH"
-	RETVAL=0
+	errormsg "No Match for $SEARCHPAT. Restart at top of file"
+	RETVAL=1
     else
-	RETVAL="$CURLIN"
+	RETVAL="$MATCH"
     fi
 }
 	     
@@ -378,12 +378,15 @@ function bed()
 
 	if [[ $MODE == "CMD" ]]; then
 	    if [[ $INPT =~ $QUITPAT ]]; then
-		if [[ $MODIFIED=="false" || "$INPT" == "q!" ]]; then
-		    MODE="QUIT"
-		elif [[ $MODIFIED == "true" && "$INPT" == "q!" ]]; then
+		set -xv
+		if [[ "$MODIFIED" == "false" ]]; then
 		    MODE="QUIT"
 		else
-		    beprintline "? Modification not saved. Use q! to quit"
+		    if [[ "$INPT" == "q!" ]]; then
+			MODE="QUIT"
+		    else
+			beprintline "? Modification not saved. Use q! to quit"
+		    fi
 		fi
 		INPT=""
 	    elif [[ ! $INPT =~ $QUITPAT ]]; then
@@ -397,27 +400,23 @@ function bed()
 		do
 		    rest=${rest:1}
 		done
-		if [ -z "$range" ]; then
-		    # commands may operative over a range of lines or patterns
-		    # this case is where no pattern given,
-		    # if ALSO no numbers are used, then the 'range' is the current line.
-		    if [ -z "$anumber" ]; then
-			anumber=$CURLIN
-			bnumber=$CURLIN
-		    else
-			# Numbers given, so validate them.
-			# Move CURLIN to the end of range.
-			anumber=$( bevalidrange "$anumber")
-			bnumber=$( bevalidrange "$bnumber" "$anumber")
-			CURLIN="$bnumber"
-		    fi
-		else
+		if [ -z "$anumber" ]; then
+		    anumber=$CURLIN
+		fi
+		if [ -z "$bnumber" ]; then
+		    bnumber="$anumber"
+		fi
+		anumber=$( bevalidrange "$anumber")
+		bnumber=$( bevalidrange "$bnumber" "$anumber")
+		CURLIN="$bnumber"	
+		if [ ! -z "$range" ]; then
 		    # A 'range' was given. This is basicly a search to find first
 		    # line with that match.
 		    besearch "$range"
 		    NEWCUR="$RETVAL"
 		    if [ $NEWCUR != -1 ]; then
 			TEST__CURLIN="$NEWCUR"
+			CURLIN=$NEWCUR
 		    fi
 		    anumber=$CURLIN
 		    bnumber=$CURLIN
